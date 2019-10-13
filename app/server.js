@@ -12,12 +12,18 @@ http.createServer((req, res) => {
     const method = req.method;
     const url = req.url;
 
-    paths.some(pathInfo => {
+    const handled = paths.some(pathInfo => {
         if ( method === pathInfo.method && url === pathInfo.url ) {
+            console.log(pathInfo);
             pathInfo.handler(req, res);
             return true;
         }
     });
+
+    if ( !handled ) {
+        res.statusCode = 404;
+        res.end();
+    }
 
 })
     .listen(PORT, () => {

@@ -1,15 +1,32 @@
-const fsPromises = require('fs').promises;
 const BodyHelper = require('../helpers/body.helper');
 const QuestionsValidator = require('../helpers/questions.validator');
-const path = require('path');
+const QuestionsDao = require('../models/questions.dao');
 
 class QuestionsController {
 
-    static getRandomQuestion(req, res) {
-        res.end('Question');
+    constructor() {
     }
 
-    static async createQuestion(req, res) {
+    get getRandomQuestion() {
+        return this._getRandomQuestion.bind(this);
+    }
+
+    get createQuestion() {
+        return this._createQuestion.bind(this);
+    }
+
+    async _getRandomQuestion(req, res) {
+        const counter = await QuestionsDao.getQuestionsCount();
+        const questionNumber = this._getRandomQuestionNumber(counter);
+
+        const question = await QuestionsDao.getQuestionByNumber(questionNumber);
+
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(question));
+    }
+
+    async _createQuestion(req, res) {
         const body = await BodyHelper.getBody(req);
         
         const err = QuestionsValidator.validateCreateQuestion(body);
@@ -18,13 +35,17 @@ class QuestionsController {
             return res.end(err.message);
         }
 
-        const filePath = path.join(__dirname, '../models/questions.model.csv');
-        await fsPromises.appendFile(filePath, `\n"${body.question}";"${body.answer}"`);
-        
+        await QuestionsDao.createQuestion(body.question, body.answer);
+        await QuestionsDao.incrementQuestionsCount();
+
         res.statusCode = 201;
         res.end();
     }
 
+    _getRandomQuestionNumber(counter) {
+        return Math.ceil( Math.random() * counter );
+    }
+
 }
 
-module.exports = QuestionsController;
+module.exports = new QuestionsController();
